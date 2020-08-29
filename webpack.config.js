@@ -5,7 +5,8 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
 const TerserWebpackPlugin = require("terser-webpack-plugin");
-const { config } = require("process");
+const WebpackBundleAnalyzerPlugin = require("webpack-bundle-analyzer")
+  .BundleAnalyzerPlugin;
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -59,6 +60,50 @@ const getBabelOptions = (preset) => {
   return opts;
 };
 
+const getJSLoaders = () => {
+  const loaders = [
+    {
+      loader: "babel-loader",
+      options: getBabelOptions(),
+    },
+  ];
+
+  if (isDev) {
+    loaders.push("eslint-loader");
+  }
+
+  return loaders;
+};
+
+const getPlugins = () => {
+  const basePlugins = [
+    new HTMLWebpackPlugin({
+      template: "./index.html",
+      minify: {
+        collapseWhitespace: !isDev,
+      },
+    }),
+    new CleanWebpackPlugin(),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, "src/check.ico"),
+          to: path.resolve(__dirname, "dist"),
+        },
+      ],
+    }),
+    new MiniCssExtractPlugin({
+      filename: getFileName("css"),
+    }),
+  ];
+
+  if (!isDev) {
+    basePlugins.push(new WebpackBundleAnalyzerPlugin());
+  }
+
+  return basePlugins;
+};
+
 module.exports = {
   context: path.resolve(__dirname, "src"),
   mode: "development",
@@ -83,26 +128,7 @@ module.exports = {
     hot: isDev,
   },
   devtool: isDev ? "source-map" : "",
-  plugins: [
-    new HTMLWebpackPlugin({
-      template: "./index.html",
-      minify: {
-        collapseWhitespace: !isDev,
-      },
-    }),
-    new CleanWebpackPlugin(),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: path.resolve(__dirname, "src/check.ico"),
-          to: path.resolve(__dirname, "dist"),
-        },
-      ],
-    }),
-    new MiniCssExtractPlugin({
-      filename: getFileName("css"),
-    }),
-  ],
+  plugins: getPlugins(),
   module: {
     rules: [
       {
@@ -128,10 +154,7 @@ module.exports = {
       {
         test: /\.js$/,
         exclude: /node_modules/,
-        loader: {
-          loader: "babel-loader",
-          options: getBabelOptions(),
-        },
+        use: getJSLoaders(),
       },
       {
         test: /\.ts$/,
