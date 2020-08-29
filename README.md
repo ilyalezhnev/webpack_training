@@ -1,1 +1,1 @@
-# webpack_training
+# Webpack training
